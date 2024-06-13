@@ -235,5 +235,5 @@ def visualize(seq, exp):
 if __name__ == "__main__":
     exp_name = "pretrained"
 #    for sequence in ["basketball", "boxes", "football", "juggle", "softball", "tennis"]:
-    for sequence in ["basketball"]:
+    for sequence in ["tennis"]:
         visualize(sequence, exp_name)

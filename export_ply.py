@@ -119,12 +119,14 @@ def parse_args():
 def load_scene_data(path, seg_as_col=False):  # seq, exp, seg_as_col=False):
     params = dict(np.load(f"{path}"))
 
-    deviceType = "cuda"
-    if torch.cuda.is_available():
-        params = {k: torch.tensor(v).cuda().float() for k, v in params.items()}
-    else:
-        params = {k: torch.tensor(v).float() for k, v in params.items()}
-        deviceType = "cpu"
+#    deviceType = "cuda"
+#    if torch.cuda.is_available():
+#        params = {k: torch.tensor(v).cuda().float() for k, v in params.items()}
+#    else:
+#        params = {k: torch.tensor(v).float() for k, v in params.items()}
+#        deviceType = "cpu"
+    params = {k: torch.tensor(v).float() for k, v in params.items()}
+    deviceType = "cpu"
 
     print(f"seg color length = {len(params['seg_colors'])}")
     is_fg = params["seg_colors"][:, 0] > 0.5
@@ -156,7 +158,7 @@ if __name__ == "__main__":
     scene_data, is_fg = load_scene_data(args.path)
 
     params = scene_data[0]
-    view_scale = 10000 # from visualizer
+#    view_scale = 10000   # from visualizer
 
     means = params["means3D"]
     scales = params["scales"]
