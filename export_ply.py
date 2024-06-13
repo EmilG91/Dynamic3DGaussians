@@ -137,7 +137,7 @@ def load_scene_data(path, seg_as_col=False):  # seq, exp, seg_as_col=False):
             ),
             "rotations": torch.nn.functional.normalize(params["unnorm_rotations"][t]),
             "opacities": torch.sigmoid(params["logit_opacities"]),
-            "scales": torch.exp(params["log_scales"]),
+            "scales": params["log_scales"],
             "means2D": torch.zeros_like(params["means3D"][0], device=deviceType),
         }
         if REMOVE_BACKGROUND:
