@@ -23,7 +23,7 @@ REMOVE_BACKGROUND = False  # False or True
 FORCE_LOOP = False  # False or True
 # FORCE_LOOP = True  # False or True
 
-w, h = 640, 360
+w, h = 1920, 1080
 near, far = 0.01, 100.0
 view_scale = 3.9
 fps = 20
@@ -234,5 +234,6 @@ def visualize(seq, exp):
 
 if __name__ == "__main__":
     exp_name = "pretrained"
-    for sequence in ["basketball", "boxes", "football", "juggle", "softball", "tennis"]:
+#    for sequence in ["basketball", "boxes", "football", "juggle", "softball", "tennis"]:
+    for sequence in ["basketball"]:
         visualize(sequence, exp_name)
