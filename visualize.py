@@ -25,7 +25,7 @@ FORCE_LOOP = False  # False or True
 
 w, h = 1920, 1080
 near, far = 0.01, 100.0
-view_scale = 3.9
+view_scale = 1
 fps = 20
 traj_frac = 25  # 4% of points
 traj_length = 15

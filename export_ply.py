@@ -3,6 +3,7 @@ import argparse
 from importlib.machinery import SourceFileLoader
 import torch
 import pathlib
+import hashlib
 
 import numpy as np
 from plyfile import PlyData, PlyElement
@@ -10,9 +11,6 @@ from plyfile import PlyData, PlyElement
 # Spherical harmonic constant
 C0 = 0.28209479177387814
 REMOVE_BACKGROUND = False  # False or True
-
-
-# REMOVE_BACKGROUND = True  # False or True
 
 
 def rgb_to_spherical_harmonic(rgb):
@@ -106,6 +104,7 @@ def save_ply(path, means, scales, rotations, rgbs, spherical_harmonics, opacitie
     el = PlyElement.describe(elements, "vertex")
     PlyData([el]).write(path)
 
+    print(hashlib.md5(attributes).hexdigest())
     print(f"Saved PLY format Splat to {path}")
 
 
@@ -113,6 +112,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     # parser.add_argument("config", type=str, help="Path to config file.")
     parser.add_argument("--path", type=pathlib.Path, help="Path to npz file")
+    parser.add_argument("--no-harmonics", action="store_false", dest='harmonics', default=True, help="calculate no harmonics")
     return parser.parse_args()
 
 
@@ -158,7 +158,6 @@ if __name__ == "__main__":
     scene_data, is_fg = load_scene_data(args.path)
 
     params = scene_data[0]
-#    view_scale = 10000   # from visualizer
 
     means = params["means3D"]
     scales = params["scales"]
@@ -166,18 +165,23 @@ if __name__ == "__main__":
     rgbs = params["colors_precomp"]
     opacities = params["opacities"]
     ply_path = os.path.join("splat.ply")
-    spherical_harmonics = np.zeros([rgbs.shape[0], 45])
 
-    # for i in range(0, rgbs.shape[0], 1):
-    #     for j in range(0, spherical_harmonics.shape[1], 3):
-    #         tmp = np.zeros(3)
-    #         tmp[0] = rgbs[i, 0]
-    #         tmp[1] = rgbs[i, 1]
-    #         tmp[2] = rgbs[i, 2]
-    #         tmp = rgb_to_spherical_harmonic(tmp)
-    #         spherical_harmonics[i, j] = tmp[0]
-    #         spherical_harmonics[i, j+1] = tmp[1]
-    #         spherical_harmonics[i, j+2] = tmp[2]
+    spherical_harmonics = np.zeros([rgbs.shape[0], 45])
+    if args.harmonics:
+        progress = 0
+        for i in range(0, rgbs.shape[0], 1):
+            for j in range(0, spherical_harmonics.shape[1], 3):
+                tmp = np.zeros(3)
+                tmp[0] = rgbs[i, 0]
+                tmp[1] = rgbs[i, 1]
+                tmp[2] = rgbs[i, 2]
+                tmp = rgb_to_spherical_harmonic(tmp)
+                spherical_harmonics[i, j] = tmp[0]
+                spherical_harmonics[i, j+1] = tmp[1]
+                spherical_harmonics[i, j+2] = tmp[2]
+            if i/rgbs.shape[0] > progress + 0.2:
+                progress += 0.2
+                print('spherical harmonics progress: ', progress)
 
     save_ply(ply_path, means, scales, rotations, rgbs, spherical_harmonics, opacities)
 
