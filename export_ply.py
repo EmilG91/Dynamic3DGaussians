@@ -112,19 +112,21 @@ def parse_args():
     parser = argparse.ArgumentParser()
     # parser.add_argument("config", type=str, help="Path to config file.")
     parser.add_argument("--path", type=pathlib.Path, help="Path to npz file")
-    parser.add_argument("--no-harmonics", action="store_false", dest='harmonics', default=True, help="calculate no harmonics")
+    parser.add_argument("--out-dir", type=pathlib.Path, default="output/ply", dest='out_dir', help="Output directory")
+    parser.add_argument("--no-harmonics", action="store_false", dest='harmonics', default=True,
+                        help="calculate no harmonics")
     return parser.parse_args()
 
 
 def load_scene_data(path, seg_as_col=False):  # seq, exp, seg_as_col=False):
     params = dict(np.load(f"{path}"))
 
-#    deviceType = "cuda"
-#    if torch.cuda.is_available():
-#        params = {k: torch.tensor(v).cuda().float() for k, v in params.items()}
-#    else:
-#        params = {k: torch.tensor(v).float() for k, v in params.items()}
-#        deviceType = "cpu"
+    #    deviceType = "cuda"
+    #    if torch.cuda.is_available():
+    #        params = {k: torch.tensor(v).cuda().float() for k, v in params.items()}
+    #    else:
+    #        params = {k: torch.tensor(v).float() for k, v in params.items()}
+    #        deviceType = "cpu"
     params = {k: torch.tensor(v).float() for k, v in params.items()}
     deviceType = "cpu"
 
@@ -150,6 +152,33 @@ def load_scene_data(path, seg_as_col=False):  # seq, exp, seg_as_col=False):
     return scene_data, is_fg
 
 
+def extract_values(gaussian_frame, calculate_harmonics=True):
+    frame_means = gaussian_frame["means3D"]
+    frame_scales = gaussian_frame["scales"]
+    frame_rotations = gaussian_frame["rotations"]
+    frame_rgbs = gaussian_frame["colors_precomp"]
+    frame_opacities = gaussian_frame["opacities"]
+    frame_spherical_harmonics = np.zeros([frame_rgbs.shape[0], 45])
+
+    if calculate_harmonics:
+        progress = 0
+        for i in range(0, frame_rgbs.shape[0], 1):
+            for j in range(0, frame_spherical_harmonics.shape[1], 3):
+                tmp = np.zeros(3)
+                tmp[0] = frame_rgbs[i, 0]
+                tmp[1] = frame_rgbs[i, 1]
+                tmp[2] = frame_rgbs[i, 2]
+                tmp = rgb_to_spherical_harmonic(tmp)
+                frame_spherical_harmonics[i, j] = tmp[0]
+                frame_spherical_harmonics[i, j + 1] = tmp[1]
+                frame_spherical_harmonics[i, j + 2] = tmp[2]
+            if i / frame_rgbs.shape[0] > progress + 0.2:
+                progress += 0.2
+                print('spherical harmonics progress: ', progress)
+
+    return frame_means, frame_scales, frame_rotations, frame_rgbs, frame_opacities, frame_spherical_harmonics
+
+
 if __name__ == "__main__":
     args = parse_args()
     tmpPath = "output/pretrained/tennis/params.npz"
@@ -157,33 +186,15 @@ if __name__ == "__main__":
         args.path = tmpPath
     scene_data, is_fg = load_scene_data(args.path)
 
-    params = scene_data[0]
+    if not os.path.exists(args.out_dir):
+        os.makedirs(args.out_dir)
 
-    means = params["means3D"]
-    scales = params["scales"]
-    rotations = params["rotations"]
-    rgbs = params["colors_precomp"]
-    opacities = params["opacities"]
-    ply_path = os.path.join("splat.ply")
-
-    spherical_harmonics = np.zeros([rgbs.shape[0], 45])
-    if args.harmonics:
-        progress = 0
-        for i in range(0, rgbs.shape[0], 1):
-            for j in range(0, spherical_harmonics.shape[1], 3):
-                tmp = np.zeros(3)
-                tmp[0] = rgbs[i, 0]
-                tmp[1] = rgbs[i, 1]
-                tmp[2] = rgbs[i, 2]
-                tmp = rgb_to_spherical_harmonic(tmp)
-                spherical_harmonics[i, j] = tmp[0]
-                spherical_harmonics[i, j+1] = tmp[1]
-                spherical_harmonics[i, j+2] = tmp[2]
-            if i/rgbs.shape[0] > progress + 0.2:
-                progress += 0.2
-                print('spherical harmonics progress: ', progress)
-
-    save_ply(ply_path, means, scales, rotations, rgbs, spherical_harmonics, opacities)
+    #for i in range(0, len(scene_data)):
+    for i in range(0, 1):
+        ply_path = os.path.join(args.out_dir, f"splat_{i}.ply")
+        params = scene_data[i]
+        means, scales, rotations, rgbs, opacities, spherical_harmonics = extract_values(params, args.harmonics)
+        save_ply(ply_path, means, scales, rotations, rgbs, spherical_harmonics, opacities)
 
     # Load SplaTAM config
     # experiment = SourceFileLoader(
